@@ -1,0 +1,170 @@
+# Fuentes del agente de ganadería bovina de carne.
+# - priority 1: se usan en la primera versión. priority 2: se suman si hay tiempo/cuota.
+# - url_verified: false  => el primer paso del agente (probe) comprueba cada URL
+#   y detecta feed/API automáticamente. Ninguna URL de feed está asumida acá.
+# - country: ISO-2. null = organismo global. EU se trata como región.
+# - access: rss | web | pdf | api  (cómo se espera consumirla; el probe lo confirma)
+
+sources:
+  # ---------------- Argentina: qué pasa hoy ----------------
+  - slug: senasa
+    name: SENASA
+    url: https://www.argentina.gob.ar/senasa
+    country: AR
+    type: gobierno
+    access: web
+    priority: 1
+    url_verified: false
+    justification: Fuente oficial de existencias bovinas, faena, movimientos y normativa de trazabilidad.
+
+  - slug: inta
+    name: INTA
+    url: https://www.argentina.gob.ar/inta
+    country: AR
+    type: instituto_tecnico
+    access: web
+    priority: 1
+    url_verified: false
+    justification: Referente técnico nacional; publica informes y papers sobre prácticas productivas y adopción de tecnología.
+
+  - slug: ipcva
+    name: IPCVA (Instituto de Promoción de la Carne Vacuna Argentina)
+    url: https://www.ipcva.com.ar
+    country: AR
+    type: gremio
+    access: web
+    priority: 1
+    url_verified: false
+    justification: Estadísticas de faena, consumo y exportaciones y estudios sectoriales de la cadena.
+
+  - slug: mag
+    name: Mercado Agroganadero (Cañuelas)
+    url: https://www.mercadoagroganadero.com.ar
+    country: AR
+    type: gremio
+    access: web
+    priority: 1
+    url_verified: false
+    justification: Precios y volúmenes de hacienda en tiempo real; sirve para medir capacidad financiera y contexto de mercado.
+
+  - slug: bcr
+    name: Bolsa de Comercio de Rosario
+    url: https://www.bcr.com.ar
+    country: AR
+    type: gremio
+    access: web
+    priority: 2
+    url_verified: false
+    justification: Informes económicos sectoriales con análisis de costos, márgenes y financiamiento.
+
+  - slug: datos-gob-ar
+    name: Portal de Datos Abiertos de Argentina
+    url: https://datos.gob.ar
+    country: AR
+    type: gobierno
+    access: api
+    priority: 2
+    url_verified: false
+    justification: Datos abiertos con acceso por API, ideales para una recolección repetible y verificable.
+
+  # ---------------- Medios especializados (tendencias y proveedores) ----------------
+  - slug: valorcarne
+    name: Valor Carne
+    url: https://www.valorcarne.com.ar
+    country: AR
+    type: medio
+    access: rss
+    priority: 1
+    url_verified: false
+    justification: Cobertura diaria de la cadena de carne vacuna; detecta novedades de tecnología, mercado y regulación.
+
+  - slug: chacra
+    name: Revista Chacra
+    url: https://www.revistachacra.com.ar
+    country: AR
+    type: medio
+    access: rss
+    priority: 1
+    url_verified: false
+    justification: Publicación técnica del agro con notas sobre manejo, genética y tecnología aplicada.
+
+  - slug: agrofy-news
+    name: Agrofy News
+    url: https://news.agrofy.com.ar
+    country: AR
+    type: medio
+    access: rss
+    priority: 2
+    url_verified: false
+    justification: Seguimiento de agtech y proveedores de tecnología para el productor.
+
+  - slug: campo-en-accion
+    name: Campo en Acción
+    url: https://www.campoenaccion.com
+    country: AR
+    type: medio
+    access: rss
+    priority: 2
+    url_verified: false
+    justification: Noticias de actualidad ganadera y casos de adopción tecnológica.
+
+  # ---------------- Benchmarks internacionales: qué puede venir ----------------
+  - slug: usda-fas
+    name: USDA Foreign Agricultural Service (reportes GAIN)
+    url: https://www.fas.usda.gov
+    country: US
+    type: organismo_internacional
+    access: pdf
+    priority: 1
+    url_verified: false
+    justification: Reportes anuales por país (incluida Argentina) con comparaciones de producción, tecnología y política; permite benchmark homogéneo.
+
+  - slug: mla
+    name: Meat & Livestock Australia
+    url: https://www.mla.com.au
+    country: AU
+    type: gremio
+    access: web
+    priority: 1
+    url_verified: false
+    justification: Referente mundial en adopción de ganadería de precisión, genética y trazabilidad (sistema NLIS).
+
+  - slug: inac
+    name: INAC (Instituto Nacional de Carnes, Uruguay)
+    url: https://www.inac.gub.uy
+    country: UY
+    type: gobierno
+    access: web
+    priority: 1
+    url_verified: false
+    justification: Uruguay tiene trazabilidad individual obligatoria; benchmark cercano y comparable en sistemas pastoriles.
+
+  - slug: embrapa
+    name: Embrapa (Brasil)
+    url: https://www.embrapa.br
+    country: BR
+    type: instituto_tecnico
+    access: web
+    priority: 1
+    url_verified: false
+    justification: Principal competidor exportador; referencia en intensificación, genética y reducción de emisiones.
+
+  - slug: fao
+    name: FAO (ganadería)
+    url: https://www.fao.org/animal-production
+    country: null
+    type: organismo_internacional
+    access: web
+    priority: 2
+    url_verified: false
+    justification: Visión global de tendencias de producción, sostenibilidad y emisiones del sector ganadero.
+
+  - slug: eu-deforestation
+    name: Comisión Europea - Reglamento contra la deforestación
+    url: https://environment.ec.europa.eu
+    country: EU
+    type: gobierno
+    access: web
+    priority: 2
+    url_verified: false
+    justification: Normativa que condiciona el acceso de la carne a la UE y exige trazabilidad; impulsa adopción a mediano plazo.

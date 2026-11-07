@@ -1,0 +1,70 @@
+# Catálogo de tendencias canónicas. El LLM debe reutilizar estos slugs cuando
+# un documento habla del mismo concepto; solo propone uno nuevo si no encaja.
+# Esto evita duplicados ("caravanas electrónicas" vs "trazabilidad electrónica")
+# y mantiene el dashboard consistente entre ejecuciones.
+
+trends:
+  - slug: trazabilidad-electronica
+    name: Trazabilidad electrónica individual
+    category: tecnologia
+    summary_simple: Identificar a cada animal con caravana o bolo electrónico para conocer su origen e historia sanitaria.
+
+  - slug: ganaderia-de-precision
+    name: Ganadería de precisión
+    category: tecnologia
+    summary_simple: Sensores, collares, balanzas y drones que miden al rodeo sin tener que encerrarlo.
+
+  - slug: genetica-mejoramiento
+    name: Genética y mejoramiento
+    category: tecnologia
+    summary_simple: Elegir toros y vientres con datos (DEP, genómica) para mejorar kilos, fertilidad y eficiencia.
+
+  - slug: manejo-pasturas
+    name: Manejo de pasturas y pastoreo planificado
+    category: tecnologia
+    summary_simple: Usar imágenes satelitales y pastoreo rotativo para cuidar el pasto y producir más carne por hectárea.
+
+  - slug: intensificacion-feedlot
+    name: Intensificación y eficiencia de conversión
+    category: tecnologia
+    summary_simple: Terminar los animales con corral y suplementación para ganar kilos más rápido y con menos alimento.
+
+  - slug: gestion-digital
+    name: Software de gestión del rodeo
+    category: tecnologia
+    summary_simple: Registrar stock, sanidad, pesadas y costos en el celular o la computadora en lugar de en cuadernos.
+
+  - slug: sanidad-digital
+    name: Sanidad y bienestar animal digitalizados
+    category: tecnologia
+    summary_simple: Registros sanitarios digitales y monitoreo de salud para prevenir enfermedades y cumplir normas.
+
+  - slug: reduccion-emisiones
+    name: Huella de carbono y reducción de emisiones
+    category: mercado
+    summary_simple: Medir y bajar las emisiones de la producción, algo que cada vez piden más los compradores.
+
+  - slug: exigencias-exportacion
+    name: Exigencias de sostenibilidad y trazabilidad para exportar
+    category: regulacion
+    summary_simple: Reglas de la Unión Europea, China y otros destinos que piden probar de dónde viene la carne.
+
+  - slug: financiamiento-ganadero
+    name: Crédito y financiamiento para invertir
+    category: financiamiento
+    summary_simple: Líneas de crédito y herramientas financieras disponibles para que el productor pueda adoptar tecnología.
+
+  - slug: precios-y-margenes
+    name: Precios de la hacienda y márgenes
+    category: mercado
+    summary_simple: Cuánto se paga la hacienda y cuánto queda después de costos; define la capacidad de invertir.
+
+  - slug: agtech-proveedores
+    name: Ecosistema de proveedores de tecnología ganadera
+    category: mercado
+    summary_simple: Empresas y startups que venden soluciones tecnológicas al productor y cómo crecen.
+
+  - slug: carne-diferenciada
+    name: Carne certificada y con valor agregado
+    category: mercado
+    summary_simple: Programas, marcas y certificaciones que permiten cobrar más por una carne con atributos reconocidos.
