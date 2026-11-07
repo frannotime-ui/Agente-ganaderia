@@ -35,6 +35,10 @@ def collect_source(source: dict, find_known) -> tuple[list[dict], str | None]:
             source["url"], html, limit * 2, prefer_pdf=source["access_type"] == "pdf"
         )
 
+    # 3) Página única (p. ej. una normativa): la propia página es el documento
+    if not entries and html:
+        entries = [{"url": source["url"], "title": None, "published_at": None}]
+
     if not entries:
         log.warning("[%s] sin entradas (feed ni links)", source["slug"])
         return [], discovered

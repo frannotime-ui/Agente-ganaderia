@@ -11,6 +11,7 @@ import json
 import sys
 
 import yaml
+from bs4 import BeautifulSoup
 
 from . import config, fetch
 
@@ -28,6 +29,10 @@ def probe(source: dict) -> dict:
     links = fetch.candidate_links(source["url"], home.text, 50, prefer_pdf=source["access"] == "pdf")
     res["links"] = len(links)
     if not res["feed"] and not links:
+        page_text = BeautifulSoup(home.text, "html.parser").get_text(" ")
+        if fetch.relevance_hits(page_text) >= config.MIN_RELEVANCE_HITS:
+            res["note"] = "sin feed ni links: se usará la página misma como documento"
+            return res
         res.update(status="sin_contenido", note="sin feed ni links relevantes; probablemente requiere JavaScript o una URL más específica")
     return res
 

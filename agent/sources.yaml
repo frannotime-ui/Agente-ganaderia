@@ -115,7 +115,7 @@ sources:
     country: US
     type: organismo_internacional
     access: pdf
-    priority: 1
+    priority: 3   # HTTP 403: USDA bloquea el acceso automatizado desde GitHub; no se intenta eludir
     url_verified: false
     justification: Reporte anual del agregado agrícola de EE.UU. sobre la ganadería argentina (producción, tecnología, política); base comparable con los demás países.
 
@@ -125,7 +125,7 @@ sources:
     country: US
     type: organismo_internacional
     access: pdf
-    priority: 1
+    priority: 3   # HTTP 403: USDA bloquea el acceso automatizado desde GitHub; no se intenta eludir
     url_verified: false
     justification: Mismo formato que el de Argentina, para comparar con Brasil, principal competidor exportador.
 
@@ -135,7 +135,7 @@ sources:
     country: US
     type: organismo_internacional
     access: pdf
-    priority: 1
+    priority: 3   # HTTP 403: USDA bloquea el acceso automatizado desde GitHub; no se intenta eludir
     url_verified: false
     justification: Mismo formato que el de Argentina, para comparar con Uruguay (trazabilidad individual obligatoria).
 
@@ -145,7 +145,7 @@ sources:
     country: US
     type: organismo_internacional
     access: pdf
-    priority: 2
+    priority: 3   # HTTP 403 (ver usda-gain-ar)
     url_verified: false
     justification: Mismo formato que el de Argentina, para comparar con Australia.
 
@@ -198,3 +198,54 @@ sources:
     priority: 2
     url_verified: false
     justification: Normativa que condiciona el acceso de la carne a la UE y exige trazabilidad; impulsa adopción a mediano plazo.
+
+  # ---------------- Benchmarks adicionales (reemplazan la cobertura que no da USDA) ----------------
+  - slug: beef-central
+    name: Beef Central (Australia)
+    url: https://www.beefcentral.com
+    country: AU
+    type: medio
+    access: rss
+    priority: 1
+    url_verified: false
+    justification: Medio especializado australiano; cubre adopción de tecnología, trazabilidad (NLIS) y mercado, con RSS.
+
+  - slug: inia-uy
+    name: INIA (Instituto Nacional de Investigación Agropecuaria, Uruguay)
+    url: https://www.inia.uy
+    country: UY
+    type: instituto_tecnico
+    access: web
+    priority: 1
+    url_verified: false
+    justification: Investigación ganadera uruguaya (genética, pasturas, eficiencia); referencia técnica comparable con INTA.
+
+  - slug: portal-dbo
+    name: Portal DBO (Brasil)
+    url: https://www.portaldbo.com.br
+    country: BR
+    type: medio
+    access: web
+    priority: 1
+    url_verified: false
+    justification: Medio brasileño especializado en ganadería de carne; cubre intensificación, confinamiento y tecnología.
+
+  - slug: abiec
+    name: ABIEC (Asociación de Exportadores de Carne, Brasil)
+    url: https://www.abiec.com.br
+    country: BR
+    type: gremio
+    access: web
+    priority: 2
+    url_verified: false
+    justification: Cifras y posición del sector exportador brasileño, principal competidor de Argentina.
+
+  - slug: mgap-uy
+    name: MGAP Uruguay (Ministerio de Ganadería, Agricultura y Pesca)
+    url: https://www.gub.uy/ministerio-ganaderia-agricultura-pesca
+    country: UY
+    type: gobierno
+    access: web
+    priority: 2
+    url_verified: false
+    justification: Fuente oficial del sistema de trazabilidad individual obligatoria (SNIG) y políticas del sector.
