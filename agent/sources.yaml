@@ -8,24 +8,26 @@
 sources:
   # ---------------- Argentina: qué pasa hoy ----------------
   - slug: senasa
-    name: SENASA
-    url: https://www.argentina.gob.ar/senasa
+    name: SENASA (novedades publicadas en argentina.gob.ar)
+    url: https://www.argentina.gob.ar/noticias
+    no_feed: true   # el feed del portal es de todo el Estado (trae avisos de búsqueda de personas, etc.)
     country: AR
     type: gobierno
     access: web
     priority: 1
     url_verified: false
-    justification: Fuente oficial de existencias bovinas, faena, movimientos y normativa de trazabilidad.
+    justification: Fuente oficial de normativa y novedades de trazabilidad y sanidad animal; se filtran solo las notas del sector ganadero.
 
   - slug: inta
     name: INTA
-    url: https://www.argentina.gob.ar/inta
+    url: https://inta.gob.ar/noticias
+    no_feed: true
     country: AR
     type: instituto_tecnico
     access: web
     priority: 1
     url_verified: false
-    justification: Referente técnico nacional; publica informes y papers sobre prácticas productivas y adopción de tecnología.
+    justification: Referente técnico nacional; publica noticias e informes sobre prácticas productivas y adopción de tecnología.
 
   - slug: ipcva
     name: IPCVA (Instituto de Promoción de la Carne Vacuna Argentina)
@@ -249,3 +251,13 @@ sources:
     priority: 2
     url_verified: false
     justification: Fuente oficial del sistema de trazabilidad individual obligatoria (SNIG) y políticas del sector.
+
+  - slug: bichos-de-campo
+    name: Bichos de Campo
+    url: https://bichosdecampo.com
+    country: AR
+    type: medio
+    access: rss
+    priority: 1
+    url_verified: false
+    justification: Cobertura detallada de normativa SENASA, trazabilidad, costos y debate del sector; complementa las fuentes oficiales.

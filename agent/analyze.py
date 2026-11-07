@@ -126,32 +126,55 @@ def _gemini():
     return _client
 
 
-def extract(doc: dict, taxonomy: list[dict]) -> tuple[list[dict], int]:
-    """Llama a Gemini con reintentos (cuota gratuita) y devuelve (observaciones verificadas, descartadas)."""
+_dead: set[str] = set()   # modelos agotados o inexistentes durante esta corrida
+
+
+def extract(doc: dict, taxonomy: list[dict]) -> tuple[list[dict], int, str]:
+    """
+    Llama a Gemini probando los modelos de config.GEMINI_MODELS en orden.
+    Devuelve (observaciones verificadas, descartadas, modelo usado).
+    """
     from google.genai import types
 
     prompt = build_prompt(doc, taxonomy)
-    for attempt in range(1, config.LLM_MAX_RETRIES + 1):
-        try:
-            resp = _gemini().models.generate_content(
-                model=config.GEMINI_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=ExtractionResult,
-                    temperature=0.1,
-                ),
-            )
-            result = resp.parsed
-            if result is None:
-                result = ExtractionResult.model_validate_json(resp.text)
-            return clean_observations(result, doc["content_text"])
-        except Exception as e:
-            msg = str(e)
-            transient = any(k in msg for k in ("429", "RESOURCE_EXHAUSTED", "503", "UNAVAILABLE", "500"))
-            if attempt == config.LLM_MAX_RETRIES or not transient:
+    last_err: Exception | None = None
+    for model in config.GEMINI_MODELS:
+        if model in _dead:
+            continue
+        for attempt in (1, 2):
+            try:
+                resp = _gemini().models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=ExtractionResult,
+                        temperature=0.1,
+                    ),
+                )
+                result = resp.parsed
+                if result is None:
+                    result = ExtractionResult.model_validate_json(resp.text)
+                obs, dropped = clean_observations(result, doc["content_text"])
+                return obs, dropped, model
+            except Exception as e:
+                msg, last_err = str(e), e
+                if "404" in msg or "NOT_FOUND" in msg:
+                    log.warning("modelo %s no disponible; paso al siguiente", model)
+                    _dead.add(model)
+                    break
+                if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+                    if attempt == 1:
+                        log.warning("modelo %s limitado; espero 20 s y reintento", model)
+                        time.sleep(20)
+                        continue
+                    log.warning("modelo %s sin cuota por hoy; paso al siguiente", model)
+                    _dead.add(model)
+                    break
+                if any(k in msg for k in ("503", "UNAVAILABLE", "500", "Timeout", "timed out")):
+                    if attempt == 1:
+                        time.sleep(10)
+                        continue
+                    break  # se prueba el siguiente modelo, sin descartar este para otros documentos
                 raise
-            wait = 20 * attempt
-            log.warning("Gemini limitó/falló (intento %d), espero %ss", attempt, wait)
-            time.sleep(wait)
-    return [], 0
+    raise RuntimeError(f"ningún modelo de Gemini disponible (cuota agotada o error): {last_err}")

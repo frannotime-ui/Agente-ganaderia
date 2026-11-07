@@ -25,9 +25,12 @@ log = logging.getLogger("agent")
 
 def ingest(sb, run_id: str, max_priority: int) -> tuple[int, int]:
     with open(config.ROOT / "sources.yaml", encoding="utf-8") as f:
-        db.upsert_sources(sb, yaml.safe_load(f)["sources"])
+        cfg = yaml.safe_load(f)["sources"]
+    db.upsert_sources(sb, cfg)
+    no_feed = {c["slug"] for c in cfg if c.get("no_feed")}
     fetched = new = 0
     for source in db.active_sources(sb, max_priority):
+        source["no_feed"] = source["slug"] in no_feed
         try:
             docs, feed = collect.collect_source(source, lambda urls: db.existing_urls(sb, urls))
             if feed and not source.get("feed_url"):
@@ -46,12 +49,12 @@ def analyze_pending(sb, limit: int) -> int:
     done = 0
     for doc in db.pending_documents(sb, limit):
         try:
-            obs, dropped = analyze.extract(doc, taxonomy)
+            obs, dropped, model = analyze.extract(doc, taxonomy)
         except Exception as e:
             log.error("LLM falló en %s: %s (queda pendiente para la próxima corrida)", doc["url"], e)
             break  # probablemente cuota agotada: cortar y reintentar en la próxima ejecución
-        db.save_observations(sb, doc["id"], obs, dropped, config.GEMINI_MODEL)
-        log.info("analizado %s -> %d observaciones (%d descartadas)", doc["url"], len(obs), dropped)
+        db.save_observations(sb, doc["id"], obs, dropped, model)
+        log.info("analizado %s con %s -> %d observaciones (%d descartadas)", doc["url"], model, len(obs), dropped)
         done += 1
         time.sleep(config.LLM_SLEEP_SECONDS)
     return done

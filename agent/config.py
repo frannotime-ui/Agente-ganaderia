@@ -13,8 +13,15 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
-# --- Modelo: verificar en aistudio.google.com cuál tiene tier gratuito vigente ---
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+# --- Modelos, en orden de preferencia. Cada modelo tiene su propia cuota gratuita por día:
+# si uno se agota o no existe, el agente pasa al siguiente. Se puede cambiar con GEMINI_MODELS
+# (separados por coma). Ver los disponibles en aistudio.google.com.
+_DEFAULT_MODELS = "gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite"
+GEMINI_MODELS = [
+    m.strip()
+    for m in (os.getenv("GEMINI_MODELS") or os.getenv("GEMINI_MODEL") or _DEFAULT_MODELS).split(",")
+    if m.strip()
+]
 
 # --- Recolección ---
 USER_AGENT = os.getenv(
@@ -32,8 +39,8 @@ MIN_RELEVANCE_HITS = int(os.getenv("MIN_RELEVANCE_HITS", "2"))
 
 # --- Análisis con LLM (cuota gratuita: ir de a poco) ---
 ANALYZE_CHARS = int(os.getenv("ANALYZE_CHARS", "15000"))   # lo que se le manda al modelo
-MAX_ANALYZE_PER_RUN = int(os.getenv("MAX_ANALYZE_PER_RUN", "30"))
-LLM_SLEEP_SECONDS = float(os.getenv("LLM_SLEEP_SECONDS", "6"))
+MAX_ANALYZE_PER_RUN = int(os.getenv("MAX_ANALYZE_PER_RUN", "40"))
+LLM_SLEEP_SECONDS = float(os.getenv("LLM_SLEEP_SECONDS", "13"))   # el tier gratuito permite ~5 pedidos/minuto
 LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "4"))
 
 # --- Snapshot ---

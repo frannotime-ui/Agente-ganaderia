@@ -27,7 +27,7 @@ _last_request = 0.0
 last_failure = ""   # motivo del último fallo de http_get (lo usa el probe)
 
 RELEVANT_RE = re.compile(
-    r"bovin|vacun|ganad|hacienda|rodeo|novillo|ternero|feedlot|cattle|beef|livestock|carne|pecu[aá]ri|gado",
+    r"bovin|vacun|ganad|hacienda|rodeo|novill|ternero|vaquillona|invernada|faena|frigor[ií]fic|caravana|trazabilidad|pastura|feedlot|cattle|beef|livestock|carne|pecu[aá]ri|gado",
     re.I,
 )
 COMMON_FEED_PATHS = ["/feed", "/feed/", "/rss", "/rss.xml", "/feed.xml", "/index.xml", "/atom.xml"]
@@ -99,6 +99,8 @@ def discover_feed(base_url: str, html: str | None = None) -> str | None:
         if found:
             return found
     parts = urlparse(base_url)
+    if parts.path not in ("", "/"):
+        return None  # fuente dentro de un portal más grande: un feed en la raíz sería de todo el portal
     root = f"{parts.scheme}://{parts.netloc}"
     for path in COMMON_FEED_PATHS:
         r = http_get(root + path)

@@ -45,6 +45,10 @@ def upsert_sources(sb: Client, sources: list[dict]) -> None:
         for s in sources
     ]
     sb.table("sources").upsert(rows, on_conflict="slug").execute()
+    # Fuentes marcadas no_feed: se borra cualquier feed guardado (p. ej. uno genérico de todo el portal)
+    for s in sources:
+        if s.get("no_feed"):
+            sb.table("sources").update({"feed_url": None}).eq("slug", s["slug"]).execute()
 
 
 def active_sources(sb: Client, max_priority: int) -> list[dict]:

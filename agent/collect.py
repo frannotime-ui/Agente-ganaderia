@@ -18,12 +18,12 @@ def collect_source(source: dict, find_known) -> tuple[list[dict], str | None]:
     home = fetch.http_get(source["url"])
     html = home.text if home is not None else None
 
-    feed_url = source.get("feed_url")
+    feed_url = None if source.get("no_feed") else source.get("feed_url")
     discovered: str | None = None
     entries: list[dict] = []
 
     # 1) Feed (declarado, o descubierto)
-    if feed_url is None:
+    if feed_url is None and not source.get("no_feed"):
         feed_url = fetch.discover_feed(source["url"], html)
         discovered = feed_url
     if feed_url:
