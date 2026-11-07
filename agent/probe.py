@@ -22,7 +22,7 @@ def probe(source: dict) -> dict:
         return res
     home = fetch.http_get(source["url"])
     if home is None:
-        res.update(status="sin_respuesta", note="no respondió con HTTP 200 (caída, redirección rara o bloqueo)")
+        res.update(status="sin_respuesta", note=fetch.last_failure or "no respondió")
         return res
     res["feed"] = fetch.discover_feed(source["url"], home.text)
     links = fetch.candidate_links(source["url"], home.text, 50, prefer_pdf=source["access"] == "pdf")

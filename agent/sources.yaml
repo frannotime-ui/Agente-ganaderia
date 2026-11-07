@@ -63,7 +63,7 @@ sources:
     country: AR
     type: gobierno
     access: api
-    priority: 2
+    priority: 3   # no respondió en el probe y aporta datos tabulares, no texto: fuera de la corrida por defecto
     url_verified: false
     justification: Datos abiertos con acceso por API, ideales para una recolección repetible y verificable.
 
@@ -109,15 +109,45 @@ sources:
     justification: Noticias de actualidad ganadera y casos de adopción tecnológica.
 
   # ---------------- Benchmarks internacionales: qué puede venir ----------------
-  - slug: usda-fas
-    name: USDA Foreign Agricultural Service (reportes GAIN)
-    url: https://www.fas.usda.gov
+  - slug: usda-gain-ar
+    name: USDA GAIN - Argentina Livestock and Products Annual
+    url: https://www.fas.usda.gov/data/argentina-livestock-and-products-annual
     country: US
     type: organismo_internacional
     access: pdf
     priority: 1
     url_verified: false
-    justification: Reportes anuales por país (incluida Argentina) con comparaciones de producción, tecnología y política; permite benchmark homogéneo.
+    justification: Reporte anual del agregado agrícola de EE.UU. sobre la ganadería argentina (producción, tecnología, política); base comparable con los demás países.
+
+  - slug: usda-gain-br
+    name: USDA GAIN - Brazil Livestock and Products Annual
+    url: https://www.fas.usda.gov/data/brazil-livestock-and-products-annual
+    country: US
+    type: organismo_internacional
+    access: pdf
+    priority: 1
+    url_verified: false
+    justification: Mismo formato que el de Argentina, para comparar con Brasil, principal competidor exportador.
+
+  - slug: usda-gain-uy
+    name: USDA GAIN - Uruguay Livestock and Products Annual
+    url: https://www.fas.usda.gov/data/uruguay-livestock-and-products-annual
+    country: US
+    type: organismo_internacional
+    access: pdf
+    priority: 1
+    url_verified: false
+    justification: Mismo formato que el de Argentina, para comparar con Uruguay (trazabilidad individual obligatoria).
+
+  - slug: usda-gain-au
+    name: USDA GAIN - Australia Livestock and Products Annual
+    url: https://www.fas.usda.gov/data/australia-livestock-and-products-annual
+    country: US
+    type: organismo_internacional
+    access: pdf
+    priority: 2
+    url_verified: false
+    justification: Mismo formato que el de Argentina, para comparar con Australia.
 
   - slug: mla
     name: Meat & Livestock Australia
@@ -131,7 +161,7 @@ sources:
 
   - slug: inac
     name: INAC (Instituto Nacional de Carnes, Uruguay)
-    url: https://www.inac.gub.uy
+    url: https://www.inac.uy
     country: UY
     type: gobierno
     access: web
@@ -161,7 +191,7 @@ sources:
 
   - slug: eu-deforestation
     name: Comisión Europea - Reglamento contra la deforestación
-    url: https://environment.ec.europa.eu
+    url: https://environment.ec.europa.eu/topics/forests/deforestation/regulation-deforestation-free-products_en
     country: EU
     type: gobierno
     access: web

@@ -24,6 +24,7 @@ _session = requests.Session()
 _session.headers.update({"User-Agent": config.USER_AGENT, "Accept-Language": "es,en;q=0.8,pt;q=0.6"})
 _robots: dict[str, robotparser.RobotFileParser | None] = {}
 _last_request = 0.0
+last_failure = ""   # motivo del último fallo de http_get (lo usa el probe)
 
 RELEVANT_RE = re.compile(
     r"bovin|vacun|ganad|hacienda|rodeo|novillo|ternero|feedlot|cattle|beef|livestock|carne|pecu[aá]ri|gado",
@@ -57,9 +58,11 @@ def _allowed(url: str) -> bool:
 
 def http_get(url: str, check_robots: bool = True) -> requests.Response | None:
     """GET con demora de cortesía y respeto de robots.txt. Devuelve None si falla o está bloqueado."""
-    global _last_request
+    global _last_request, last_failure
+    last_failure = ""
     if check_robots and not _allowed(url):
         log.info("bloqueado por robots.txt: %s", url)
+        last_failure = "robots.txt no permite el acceso"
         return None
     wait = config.REQUEST_DELAY - (time.time() - _last_request)
     if wait > 0:
@@ -69,11 +72,13 @@ def http_get(url: str, check_robots: bool = True) -> requests.Response | None:
         _last_request = time.time()
         if r.status_code != 200:
             log.info("HTTP %s en %s", r.status_code, url)
+            last_failure = f"HTTP {r.status_code}"
             return None
         return r
     except requests.RequestException as e:
         _last_request = time.time()
         log.info("error de red en %s: %s", url, e)
+        last_failure = f"error de red ({type(e).__name__})"
         return None
 
 
@@ -135,7 +140,7 @@ def candidate_links(page_url: str, html: str, limit: int, prefer_pdf: bool = Fal
         url, _ = urldefrag(urljoin(page_url, a["href"]))
         if url in seen or url.rstrip("/") == page_url.rstrip("/") or SKIP_LINK_RE.search(url):
             continue
-        is_pdf = url.lower().split("?")[0].endswith(".pdf")
+        is_pdf = ".pdf" in url.lower()
         if urlparse(url).netloc != host and not is_pdf:
             continue
         text = a.get_text(" ", strip=True)
@@ -175,7 +180,7 @@ def extract_document(url: str) -> dict | None:
     published: datetime | None = None
     language: str | None = None
 
-    if "pdf" in ctype or url.lower().split("?")[0].endswith(".pdf"):
+    if "pdf" in ctype or ".pdf" in url.lower():
         try:
             with pdfplumber.open(io.BytesIO(r.content)) as pdf:
                 pages = pdf.pages[: config.MAX_PDF_PAGES]
