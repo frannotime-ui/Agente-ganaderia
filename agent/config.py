@@ -42,6 +42,9 @@ ANALYZE_CHARS = int(os.getenv("ANALYZE_CHARS", "15000"))   # lo que se le manda 
 MAX_ANALYZE_PER_RUN = int(os.getenv("MAX_ANALYZE_PER_RUN", "40"))
 LLM_SLEEP_SECONDS = float(os.getenv("LLM_SLEEP_SECONDS", "13"))   # el tier gratuito permite ~5 pedidos/minuto
 LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "4"))
+LLM_TIMEOUT_SECONDS = int(os.getenv("LLM_TIMEOUT_SECONDS", "120"))   # un pedido colgado no frena la corrida
+THINKING_LEVEL = os.getenv("THINKING_LEVEL", "low")                 # razonamiento acotado: más rápido y barato; "" = por defecto del modelo
+MAX_RUNTIME_MINUTES = int(os.getenv("MAX_RUNTIME_MINUTES", "40"))   # tope total antes de armar el resumen (GitHub corta a los 60)
 
 # --- Snapshot ---
 WINDOW_DAYS = int(os.getenv("WINDOW_DAYS", "365"))         # documentos más viejos no cuentan

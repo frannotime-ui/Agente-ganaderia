@@ -44,10 +44,18 @@ def ingest(sb, run_id: str, max_priority: int) -> tuple[int, int]:
     return fetched, new
 
 
-def analyze_pending(sb, limit: int) -> int:
+def analyze_pending(sb, limit: int, deadline: float) -> int:
     taxonomy = analyze.load_taxonomy()
     done = 0
     for doc in db.pending_documents(sb, limit):
+        if time.monotonic() > deadline:
+            log.warning("se alcanzó el tope de tiempo de análisis; lo pendiente sigue en la próxima corrida")
+            break
+        reason = analyze.skip_reason(doc)
+        if reason:
+            db.save_observations(sb, doc["id"], [], 0, "omitido")
+            log.info("omitido (%s): %s", reason, doc["url"])
+            continue
         try:
             obs, dropped, model = analyze.extract(doc, taxonomy)
         except Exception as e:
@@ -67,6 +75,7 @@ def main() -> None:
     ap.add_argument("--max-priority", type=int, default=config.MAX_PRIORITY)
     args = ap.parse_args()
 
+    deadline = time.monotonic() + config.MAX_RUNTIME_MINUTES * 60   # mismo reloj que analyze_pending
     sb = db.connect()
     run_id = db.create_run(sb)
     fetched = new = analyzed = trends_found = 0
@@ -75,7 +84,7 @@ def main() -> None:
         if not args.skip_ingest:
             fetched, new = ingest(sb, run_id, args.max_priority)
         if not args.skip_analyze:
-            analyzed = analyze_pending(sb, config.MAX_ANALYZE_PER_RUN)
+            analyzed = analyze_pending(sb, config.MAX_ANALYZE_PER_RUN, deadline)
         stats = snapshot.build_snapshot(sb, run_id, analyze.load_taxonomy())
         trends_found = stats["statuses"]
         notes = f"analizados={analyzed} {stats}"

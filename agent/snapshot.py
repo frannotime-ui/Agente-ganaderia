@@ -11,10 +11,15 @@ from . import config, db
 
 
 # ------------------------------------------------------------------ lógica pura
+LEVEL_RANK = {"sin_adopcion": 0, "incipiente": 1, "en_expansion": 2, "generalizada": 3}
+LEVEL_LABEL = {"sin_adopcion": "sin adopción", "incipiente": "incipiente",
+               "en_expansion": "en expansión", "generalizada": "generalizada"}
+
+
 def aggregate(observations: list[dict]) -> list[dict]:
     """
-    Agrupa por (tendencia, país, horizonte). El representante es la observación con
-    adoption_pct de mayor confianza (si hay); desempata la más reciente.
+    Agrupa por (tendencia, país, horizonte). El representante prefiere observaciones con nivel de
+    adopción, luego con porcentaje, y entre ellas la de mayor confianza (desempata la más reciente).
     Devuelve [{trend_slug, country_code, horizon, rep, items}].
     """
     groups: dict[tuple, list[dict]] = defaultdict(list)
@@ -22,8 +27,8 @@ def aggregate(observations: list[dict]) -> list[dict]:
         groups[(o["trend_slug"], o["country_code"], o["horizon"])].append(o)
     out = []
     for (slug, country, horizon), items in groups.items():
-        pool = [i for i in items if i.get("adoption_pct") is not None] or items
-        rep = max(pool, key=lambda i: (i["confidence"], i.get("doc_date") or ""))
+        rep = max(items, key=lambda i: (i.get("adoption_level") is not None, i.get("adoption_pct") is not None,
+                                        i["confidence"], i.get("doc_date") or ""))
         out.append({"trend_slug": slug, "country_code": country, "horizon": horizon, "rep": rep, "items": items})
     return out
 
@@ -31,31 +36,35 @@ def aggregate(observations: list[dict]) -> list[dict]:
 def compute_gaps(statuses: list[dict], home: str = config.HOME_COUNTRY,
                  min_conf: float = config.MIN_REFERENCE_CONFIDENCE) -> list[dict]:
     """
-    Brecha nacional por tendencia: adopción 'hoy' en el país local vs. la mejor adopción 'hoy'
-    entre los demás países con dato confiable. Puede ser negativa (el país local va adelante).
+    Brecha nacional por tendencia: nivel de adopción 'hoy' del país local vs. el mayor nivel entre los
+    demás países con dato confiable. gap_levels = nivel de referencia - nivel local (puede ser <= 0).
+    Si ambos lados traen porcentaje explícito, se guarda además como dato extra.
     """
     by_trend: dict[str, list[dict]] = defaultdict(list)
     for s in statuses:
-        if s["horizon"] == "hoy" and s["rep"].get("adoption_pct") is not None:
+        if s["horizon"] == "hoy" and s["rep"].get("adoption_level") in LEVEL_RANK \
+                and s["rep"]["confidence"] >= min_conf:
             by_trend[s["trend_slug"]].append(s)
     gaps = []
     for slug, rows in by_trend.items():
         local = next((r for r in rows if r["country_code"] == home), None)
-        refs = [r for r in rows if r["country_code"] != home and r["rep"]["confidence"] >= min_conf]
+        refs = [r for r in rows if r["country_code"] != home]
         if not local or not refs:
             continue
-        ref = max(refs, key=lambda r: r["rep"]["adoption_pct"])
-        cur, tgt = local["rep"]["adoption_pct"], ref["rep"]["adoption_pct"]
+        ref = max(refs, key=lambda r: (LEVEL_RANK[r["rep"]["adoption_level"]], r["rep"]["confidence"]))
+        cl, rl = local["rep"]["adoption_level"], ref["rep"]["adoption_level"]
         gaps.append({
             "trend_slug": slug,
-            "current_pct": cur,
-            "reference_pct": tgt,
+            "current_level": cl,
+            "reference_level": rl,
+            "gap_levels": LEVEL_RANK[rl] - LEVEL_RANK[cl],
+            "current_pct": local["rep"].get("adoption_pct"),
+            "reference_pct": ref["rep"].get("adoption_pct"),
             "reference_type": "benchmark_pais",
             "reference_country": ref["country_code"],
             "confidence": round(min(local["rep"]["confidence"], ref["rep"]["confidence"]), 2),
-            "rationale": (f"Adopción estimada en {home}: {cur:g}% vs. {ref['country_code']}: {tgt:g}%. "
-                          f"({local['rep'].get('adoption_note') or 'sin aclaración'}; "
-                          f"{ref['rep'].get('adoption_note') or 'sin aclaración'})"),
+            "rationale": (f"{home}: {LEVEL_LABEL[cl]}; {ref['country_code']}: {LEVEL_LABEL[rl]}. "
+                          f"{local['rep']['rationale']} / {ref['rep']['rationale']}"),
             "local": local["rep"],
             "ref": ref["rep"],
         })
@@ -87,6 +96,7 @@ def build_snapshot(sb, run_id: str, taxonomy: list[dict]) -> dict:
         {
             "trend_id": trend_ids[s["trend_slug"]], "country_code": s["country_code"], "run_id": run_id,
             "horizon": s["horizon"], "adoption_pct": s["rep"].get("adoption_pct"),
+            "adoption_level": s["rep"].get("adoption_level"),
             "adoption_note": s["rep"].get("adoption_note"), "confidence": round(s["rep"]["confidence"], 2),
             "rationale": s["rep"]["rationale"],
         }
@@ -106,6 +116,8 @@ def build_snapshot(sb, run_id: str, taxonomy: list[dict]) -> dict:
     gap_rows = [
         {
             "trend_id": trend_ids[g["trend_slug"]], "segment_id": None, "run_id": run_id,
+            "current_level": g["current_level"], "reference_level": g["reference_level"],
+            "gap_levels": g["gap_levels"],
             "current_pct": g["current_pct"], "reference_pct": g["reference_pct"],
             "reference_type": g["reference_type"], "reference_country": g["reference_country"],
             "confidence": g["confidence"], "rationale": g["rationale"],

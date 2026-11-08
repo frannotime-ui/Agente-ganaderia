@@ -1,6 +1,7 @@
 """Capa de acceso a Supabase (usa la service_role key; solo corre en el agente)."""
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
@@ -92,15 +93,32 @@ def insert_document(sb: Client, source_id: str, run_id: str, doc: dict) -> str |
 
 
 def pending_documents(sb: Client, limit: int) -> list[dict]:
-    """Documentos que todavía no pasaron por el LLM (más recientes primero)."""
+    """
+    Documentos que todavía no pasaron por el LLM, repartidos en ronda entre las fuentes
+    (para que ninguna monopolice la cuota diaria). Primero se eligen los ids (liviano)
+    y recién después se baja el texto de los elegidos.
+    """
+    from collections import defaultdict, deque
+
     analyzed = {r["document_id"] for r in paged_select(sb, "doc_observations", "document_id")}
-    pending: list[dict] = []
-    for row in paged_select(sb, "documents", "id,url,title,content_text,published_at", order="fetched_at"):
-        if row["id"] not in analyzed:
-            pending.append(row)
-            if len(pending) >= limit:
+    by_source: dict[str, deque] = defaultdict(deque)
+    for r in paged_select(sb, "documents", "id,source_id,fetched_at", order="fetched_at"):
+        if r["id"] not in analyzed:
+            by_source[r["source_id"]].append(r["id"])
+    picked: list[str] = []
+    queues = list(by_source.values())
+    while queues and len(picked) < limit:
+        for q in queues:
+            if len(picked) >= limit:
                 break
-    return pending
+            picked.append(q.popleft())
+        queues = [q for q in queues if q]
+    docs: list[dict] = []
+    for part in chunks(picked, 10):
+        docs.extend(sb.table("documents").select("id,url,title,content_text,published_at").in_("id", part).execute().data)
+    order = {i: n for n, i in enumerate(picked)}
+    docs.sort(key=lambda d: order[d["id"]])
+    return docs
 
 
 def save_observations(sb: Client, doc_id: str, observations: list[dict], dropped: int, model: str) -> None:

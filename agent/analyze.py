@@ -10,6 +10,7 @@ import yaml
 from pydantic import BaseModel, Field
 
 from . import config
+from .fetch import relevance_hits
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +28,8 @@ class Observation(BaseModel):
     summary_simple: str = Field(description="Una frase en lenguaje llano para un productor de campo")
     country_code: str = Field(description="País al que se refiere el dato (ISO-2; EU para Unión Europea)")
     horizon: Literal["hoy", "corto", "mediano", "largo"]
+    adoption_level: Optional[Literal["sin_adopcion", "incipiente", "en_expansion", "generalizada"]] = Field(
+        default=None, description="Nivel de adopción en ese país HOY; null si el texto no permite clasificarlo")
     adoption_pct: Optional[float] = Field(default=None, description="0-100, solo si el texto lo da explícitamente")
     adoption_note: Optional[str] = None
     confidence: float = Field(description="0 a 1")
@@ -58,6 +61,12 @@ REGLAS
 - quote: copia textual EXACTA del documento (máx. 300 caracteres) que respalda la observación. Si no hay cita, no incluyas la observación.
 - country_code: país al que se refiere el dato, no el país de la fuente. ISO-2 (AR, UY, BR, AU, US...), EU para la Unión Europea.
 - horizon: "hoy" si describe la práctica actual; "corto" (0-2 años), "mediano" (2-5) o "largo" (5+) si el texto proyecta, anuncia o espera algo.
+- adoption_level: solo cuando horizon es "hoy". Ubicá la práctica en ese país en UNO de estos niveles, según lo que diga el texto:
+    sin_adopcion = no existe o es excepcional;
+    incipiente = pilotos, casos aislados, o recién anunciada/implementada sin cobertura todavía;
+    en_expansion = crece y ya la usa una parte relevante de los productores, o está vigente pero aún se está implementando;
+    generalizada = práctica extendida o norma obligatoria ya vigente y cumplida por la mayoría.
+  Si el texto no alcanza para clasificarla, dejá null. No supongas: la cita tiene que justificar el nivel.
 - adoption_pct: solo si el texto da un porcentaje explícito de adopción o penetración (o los números para calcularlo directamente). Si no, null. En adoption_note aclará a qué se refiere el porcentaje.
 - confidence: 0.8 o más si es un dato explícito de fuente oficial; ~0.5 si es indirecto; menos de 0.4 si es débil.
 - supports: "adopcion" (nivel actual), "horizonte" (cuándo llegaría), "referencia" (dato de un país usado como comparación).
@@ -108,6 +117,8 @@ def clean_observations(result: ExtractionResult, doc_text: str) -> tuple[list[di
         d = o.model_dump()
         d["country_code"] = country
         d["trend_slug"] = slug
+        if d["horizon"] != "hoy":
+            d["adoption_level"] = None   # el nivel describe el presente
         d["confidence"] = max(0.0, min(1.0, d["confidence"]))
         if d["adoption_pct"] is not None:
             d["adoption_pct"] = max(0.0, min(100.0, d["adoption_pct"]))
@@ -117,16 +128,40 @@ def clean_observations(result: ExtractionResult, doc_text: str) -> tuple[list[di
 
 _client = None
 
-
 def _gemini():
     global _client
     if _client is None:
         from google import genai
-        _client = genai.Client(api_key=config.GEMINI_API_KEY)
+        from google.genai import types
+        _client = genai.Client(
+            api_key=config.GEMINI_API_KEY,
+            http_options=types.HttpOptions(timeout=config.LLM_TIMEOUT_SECONDS * 1000),
+        )
     return _client
 
 
+def _gen_config(types, use_thinking: bool):
+    kwargs = dict(response_mime_type="application/json", response_schema=ExtractionResult, temperature=0.1)
+    level = getattr(getattr(types, "ThinkingLevel", None), (config.THINKING_LEVEL or "").upper(), None)
+    if use_thinking and level is not None:
+        kwargs["thinking_config"] = types.ThinkingConfig(thinking_level=level)
+    return types.GenerateContentConfig(**kwargs)
+
+
 _dead: set[str] = set()   # modelos agotados o inexistentes durante esta corrida
+
+# Avisos y listados comerciales, o notas sin relación con ganadería: no gastan cuota del LLM.
+SKIP_URL_RE = re.compile(r"(property-sales|cattle-listings|recently-completed|for-sale|weekly-grill|application-form|/listings?/)", re.I)
+
+
+def skip_reason(doc: dict) -> str | None:
+    """Documentos que no vale la pena mandar al LLM (ahorra cuota gratuita)."""
+    if SKIP_URL_RE.search(doc["url"]):
+        return "página de avisos/listados"
+    text = doc.get("content_text")
+    if text is not None and relevance_hits(text[:6000]) < 3:
+        return "poco relacionado con ganadería"
+    return None
 
 
 def extract(doc: dict, taxonomy: list[dict]) -> tuple[list[dict], int, str]:
@@ -138,19 +173,16 @@ def extract(doc: dict, taxonomy: list[dict]) -> tuple[list[dict], int, str]:
 
     prompt = build_prompt(doc, taxonomy)
     last_err: Exception | None = None
+    use_thinking = True
     for model in config.GEMINI_MODELS:
         if model in _dead:
             continue
-        for attempt in (1, 2):
+        attempt = 0
+        while attempt < 2:
+            attempt += 1
             try:
                 resp = _gemini().models.generate_content(
-                    model=model,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        response_schema=ExtractionResult,
-                        temperature=0.1,
-                    ),
+                    model=model, contents=prompt, config=_gen_config(types, use_thinking),
                 )
                 result = resp.parsed
                 if result is None:
@@ -159,6 +191,11 @@ def extract(doc: dict, taxonomy: list[dict]) -> tuple[list[dict], int, str]:
                 return obs, dropped, model
             except Exception as e:
                 msg, last_err = str(e), e
+                if use_thinking and "thinking" in msg.lower():
+                    log.warning("el modelo no acepta el nivel de razonamiento pedido; sigo sin él")
+                    use_thinking = False
+                    attempt -= 1
+                    continue
                 if "404" in msg or "NOT_FOUND" in msg:
                     log.warning("modelo %s no disponible; paso al siguiente", model)
                     _dead.add(model)
