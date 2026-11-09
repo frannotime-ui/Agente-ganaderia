@@ -21,22 +21,23 @@
     <span class="stamp" id="stamp"></span>
   </header>
 
-  <main id="contenido">
-    <section class="wrap hero" id="hero" aria-live="polite">
-      <div><h1>Cargando datos…</h1></div>
-    </section>
+  <main id="contenido" class="wrap shell">
+    <div class="main-col">
+      <section class="intro" id="hero" aria-live="polite">
+        <div><h1>Cargando datos…</h1></div>
+      </section>
 
-    <div class="tabsbar">
-      <div class="wrap">
+      <div class="tabsbar">
         <div class="tabs" role="tablist" aria-label="Secciones">
           <button role="tab" id="tab-hoy" aria-controls="panel" aria-selected="true" data-tab="hoy">Hoy</button>
           <button role="tab" id="tab-viene" aria-controls="panel" aria-selected="false" data-tab="viene">Lo que viene</button>
-          <button role="tab" id="tab-brechas" aria-controls="panel" aria-selected="false" data-tab="brechas">Dónde estamos atrasados</button>
+          <button role="tab" id="tab-brechas" aria-controls="panel" aria-selected="false" data-tab="brechas"><span class="long">Dónde estamos atrasados</span><span class="short">Atrasos</span></button>
         </div>
       </div>
-    </div>
 
-    <section class="wrap panel" id="panel" role="tabpanel" aria-labelledby="tab-hoy" tabindex="-1"></section>
+      <section class="panel" id="panel" role="tabpanel" aria-labelledby="tab-hoy" tabindex="-1"></section>
+    </div>
+    <aside class="globe-col" id="globecol" aria-label="Globo terráqueo"></aside>
   </main>
 
   <footer class="wrap" id="pie"></footer>
@@ -56,6 +57,7 @@
   <script src="vendor/world.js"></script>
   <script src="config.js"></script>
   <script src="demo-data.js"></script>
+  <script src="globe.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
