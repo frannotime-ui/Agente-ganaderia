@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Monitor ganadero: qué pasa, qué viene y dónde estamos atrasados</title>
+  <meta name="description" content="Tendencias de la ganadería bovina de carne: cómo está Argentina hoy, qué se viene y dónde hay brechas frente a otros países.">
+  <meta name="theme-color" content="#e9efea">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%84%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+  <div id="demo-banner"></div>
+
+  <header class="wrap topbar">
+    <span class="brand">Monitor ganadero</span>
+    <span class="stamp" id="stamp"></span>
+  </header>
+
+  <main id="contenido">
+    <section class="wrap hero" id="hero" aria-live="polite">
+      <div><h1>Cargando datos…</h1></div>
+    </section>
+
+    <div class="tabsbar">
+      <div class="wrap">
+        <div class="tabs" role="tablist" aria-label="Secciones">
+          <button role="tab" id="tab-hoy" aria-controls="panel" aria-selected="true" data-tab="hoy">Hoy</button>
+          <button role="tab" id="tab-viene" aria-controls="panel" aria-selected="false" data-tab="viene">Lo que viene</button>
+          <button role="tab" id="tab-brechas" aria-controls="panel" aria-selected="false" data-tab="brechas">Dónde estamos atrasados</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="wrap panel" id="panel" role="tabpanel" aria-labelledby="tab-hoy" tabindex="-1"></section>
+  </main>
+
+  <footer class="wrap" id="pie"></footer>
+
+  <div class="scrim" id="scrim" hidden></div>
+  <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+    <div class="drawer-top">
+      <button class="iconbtn" id="drawer-back" type="button" hidden>Volver</button>
+      <span></span>
+      <button class="iconbtn" id="drawer-close" type="button" aria-label="Cerrar el panel">Cerrar</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </aside>
+
+  <script src="vendor/d3.min.js"></script>
+  <script src="vendor/topojson-client.min.js"></script>
+  <script src="vendor/world.js"></script>
+  <script src="config.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
