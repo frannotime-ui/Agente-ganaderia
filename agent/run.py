@@ -44,9 +44,10 @@ def ingest(sb, run_id: str, max_priority: int) -> tuple[int, int]:
     return fetched, new
 
 
-def analyze_pending(sb, limit: int, deadline: float) -> int:
+def analyze_pending(sb, limit: int, deadline: float) -> tuple[int, int]:
+    """Devuelve (documentos analizados, documentos que fallaron)."""
     taxonomy = analyze.load_taxonomy()
-    done = 0
+    done = failed = streak = 0
     for doc in db.pending_documents(sb, limit):
         if time.monotonic() > deadline:
             log.warning("se alcanzó el tope de tiempo de análisis; lo pendiente sigue en la próxima corrida")
@@ -59,13 +60,19 @@ def analyze_pending(sb, limit: int, deadline: float) -> int:
         try:
             obs, dropped, model = analyze.extract(doc, taxonomy)
         except Exception as e:
+            failed += 1
+            streak += 1
             log.error("LLM falló en %s: %s (queda pendiente para la próxima corrida)", doc["url"], e)
-            break  # probablemente cuota agotada: cortar y reintentar en la próxima ejecución
+            if streak >= 3:
+                log.error("3 fallos seguidos del LLM: corto el análisis (probable cuota agotada o servicio caído)")
+                break
+            continue  # un fallo aislado (timeout, 504) no debe frenar al resto de los documentos
+        streak = 0
         db.save_observations(sb, doc["id"], obs, dropped, model)
         log.info("analizado %s con %s -> %d observaciones (%d descartadas)", doc["url"], model, len(obs), dropped)
         done += 1
         time.sleep(config.LLM_SLEEP_SECONDS)
-    return done
+    return done, failed
 
 
 def main() -> None:
@@ -78,17 +85,17 @@ def main() -> None:
     deadline = time.monotonic() + config.MAX_RUNTIME_MINUTES * 60   # mismo reloj que analyze_pending
     sb = db.connect()
     run_id = db.create_run(sb)
-    fetched = new = analyzed = trends_found = 0
+    fetched = new = analyzed = failed = trends_found = 0
     status, notes = "ok", None
     try:
         if not args.skip_ingest:
             fetched, new = ingest(sb, run_id, args.max_priority)
         if not args.skip_analyze:
-            analyzed = analyze_pending(sb, config.MAX_ANALYZE_PER_RUN, deadline)
+            analyzed, failed = analyze_pending(sb, config.MAX_ANALYZE_PER_RUN, deadline)
         stats = snapshot.build_snapshot(sb, run_id, analyze.load_taxonomy())
         trends_found = stats["statuses"]
-        notes = f"analizados={analyzed} {stats}"
-        if stats["statuses"] == 0:
+        notes = f"analizados={analyzed} fallos_llm={failed} {stats}"
+        if stats["statuses"] == 0 or failed:
             status = "partial"
     except Exception as e:
         log.exception("la corrida falló")
