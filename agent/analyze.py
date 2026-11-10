@@ -208,7 +208,9 @@ def extract(doc: dict, taxonomy: list[dict]) -> tuple[list[dict], int, str]:
                     log.warning("modelo %s sin cuota por hoy; paso al siguiente", model)
                     _dead.add(model)
                     break
-                if any(k in msg for k in ("503", "UNAVAILABLE", "500", "Timeout", "timed out")):
+                low = msg.lower()
+                if any(k in msg for k in ("503", "504", "UNAVAILABLE", "DEADLINE_EXCEEDED", "500")) \
+                        or any(k in low for k in ("timeout", "timed out", "deadline")):
                     if attempt == 1:
                         time.sleep(10)
                         continue
