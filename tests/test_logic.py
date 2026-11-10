@@ -42,10 +42,10 @@ def as_dict(o, doc="d1", date="2026-01-01"):
 
 def test_aggregate_and_gaps():
     rows = [
-        as_dict(obs(country_code="AR", adoption_pct=20, confidence=0.9), "a"),
-        as_dict(obs(country_code="AR", adoption_pct=35, confidence=0.5), "b"),   # menor confianza: pierde
-        as_dict(obs(country_code="UY", adoption_pct=95, confidence=0.9), "c"),
-        as_dict(obs(country_code="AU", adoption_pct=99, confidence=0.2), "d"),   # confianza baja: no es referencia
+        as_dict(obs(country_code="AR", adoption_level="incipiente", adoption_pct=20, confidence=0.9), "a"),
+        as_dict(obs(country_code="AR", adoption_level="en_expansion", adoption_pct=35, confidence=0.5), "b"),   # menor confianza: pierde
+        as_dict(obs(country_code="UY", adoption_level="generalizada", adoption_pct=95, confidence=0.9), "c"),
+        as_dict(obs(country_code="AU", adoption_level="generalizada", adoption_pct=99, confidence=0.2), "d"),   # confianza baja: no es referencia
         as_dict(obs(country_code="AR", horizon="mediano"), "e"),
     ]
     statuses = snapshot.aggregate(rows)
@@ -53,7 +53,9 @@ def test_aggregate_and_gaps():
     gaps = snapshot.compute_gaps(statuses)
     assert len(gaps) == 1
     g = gaps[0]
-    assert (g["current_pct"], g["reference_pct"], g["reference_country"]) == (20, 95, "UY")
+    assert (g["current_level"], g["reference_level"], g["gap_levels"], g["reference_country"]) == \
+        ("incipiente", "generalizada", 2, "UY")
+    assert (g["current_pct"], g["reference_pct"]) == (20, 95)
     assert g["confidence"] == 0.9
 
 
@@ -86,3 +88,20 @@ if __name__ == "__main__":
         if name.startswith("test_"):
             fn()
             print("ok", name)
+
+
+def test_mercado_no_tiene_nivel_de_adopcion():
+    mk = lambda cat, lvl: dict(trend_slug="x", country_code="AR", horizon="hoy", category=cat,
+                               adoption_level=lvl, adoption_pct=40.0, confidence=0.8)
+    mercado = snapshot.aggregate([mk("mercado", "generalizada")])[0]["rep"]
+    assert mercado["adoption_level"] is None and mercado["adoption_pct"] is None
+    tecnologia = snapshot.aggregate([mk("tecnologia", "incipiente")])[0]["rep"]
+    assert tecnologia["adoption_level"] == "incipiente"
+
+
+def test_clean_observations_mercado_sin_nivel():
+    doc = "El precio del novillo subió esta semana en el mercado de Cañuelas."
+    r = ExtractionResult(observations=[obs(category="mercado", adoption_level="generalizada", adoption_pct=50.0,
+                                           quote="El precio del novillo subió esta semana")])
+    kept, _ = analyze.clean_observations(r, doc)
+    assert kept and kept[0]["adoption_level"] is None and kept[0]["adoption_pct"] is None
