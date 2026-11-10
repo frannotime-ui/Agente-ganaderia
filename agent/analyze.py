@@ -67,6 +67,8 @@ REGLAS
     en_expansion = crece y ya la usa una parte relevante de los productores, o está vigente pero aún se está implementando;
     generalizada = práctica extendida o norma obligatoria ya vigente y cumplida por la mayoría.
   Si el texto no alcanza para clasificarla, dejá null. No supongas: la cita tiene que justificar el nivel.
+  El nivel solo aplica a tendencias de category tecnologia, regulacion o financiamiento (prácticas, normas o herramientas que se adoptan). En category mercado (precios, faena, exportaciones, etc.) dejá SIEMPRE adoption_level y adoption_pct en null: son indicadores, no se adoptan.
+  El nivel y el porcentaje deben referirse a la práctica de ESA tendencia. Si el número del texto mide otra cosa (por ejemplo, superficie arrendada), no lo uses.
 - adoption_pct: solo si el texto da un porcentaje explícito de adopción o penetración (o los números para calcularlo directamente). Si no, null. En adoption_note aclará a qué se refiere el porcentaje.
 - confidence: 0.8 o más si es un dato explícito de fuente oficial; ~0.5 si es indirecto; menos de 0.4 si es débil.
 - supports: "adopcion" (nivel actual), "horizonte" (cuándo llegaría), "referencia" (dato de un país usado como comparación).
@@ -117,8 +119,10 @@ def clean_observations(result: ExtractionResult, doc_text: str) -> tuple[list[di
         d = o.model_dump()
         d["country_code"] = country
         d["trend_slug"] = slug
-        if d["horizon"] != "hoy":
-            d["adoption_level"] = None   # el nivel describe el presente
+        if d["horizon"] != "hoy" or d["category"] == "mercado":
+            d["adoption_level"] = None   # el nivel describe el presente y no aplica a indicadores de mercado
+        if d["category"] == "mercado":
+            d["adoption_pct"] = None
         d["confidence"] = max(0.0, min(1.0, d["confidence"]))
         if d["adoption_pct"] is not None:
             d["adoption_pct"] = max(0.0, min(100.0, d["adoption_pct"]))
