@@ -24,6 +24,8 @@ def aggregate(observations: list[dict]) -> list[dict]:
     """
     groups: dict[tuple, list[dict]] = defaultdict(list)
     for o in observations:
+        if o.get("category") == "mercado" and (o.get("adoption_level") or o.get("adoption_pct") is not None):
+            o = {**o, "adoption_level": None, "adoption_pct": None}   # indicadores de mercado: sin nivel (también en caché viejo)
         groups[(o["trend_slug"], o["country_code"], o["horizon"])].append(o)
     out = []
     for (slug, country, horizon), items in groups.items():
