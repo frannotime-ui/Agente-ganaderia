@@ -56,6 +56,12 @@
   const plural = (n, one, many) => (n === 1 ? one : many);
   const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
+  // Las tendencias de mercado son indicadores: no tienen nivel de adopción.
+  const isMarket = t => !!t && t.category === 'mercado';
+  const lvl = (t, level) => (isMarket(t) ? null : level);
+  const levelText = (t, level) => (lvl(t, level) ? LEVEL_LABEL[level] : (isMarket(t) ? 'Indicador de mercado' : 'Sin datos todavía'));
+  const meterFor = (t, level) => (isMarket(t) ? '' : meter(level));
+
   function meter(level) {
     const n = rank(level);
     const label = n < 0 ? 'Nivel sin clasificar' : 'Nivel: ' + LEVEL_LABEL[level].toLowerCase();
@@ -281,14 +287,14 @@
       html += '<div class="thead" aria-hidden="true"><span></span><span>Tendencia</span><span>Nivel de adopción</span><span>Confianza</span></div>';
       (state.cat === 'todas' ? CAT_ORDER : [state.cat]).forEach(cat => {
         const items = withData.filter(r => r.t.category === cat)
-          .sort((a, b) => rank(b.s.level) - rank(a.s.level) || a.t.name.localeCompare(b.t.name, 'es'));
+          .sort((a, b) => rank(lvl(b.t, b.s.level)) - rank(lvl(a.t, a.s.level)) || a.t.name.localeCompare(b.t.name, 'es'));
         if (!items.length) return;
         html += '<h3 class="grp">' + (CATEGORY_LABEL[cat] || cat) + '<span>' + items.length + '</span></h3>' +
           items.map(({ t, s }) =>
             '<button type="button" class="row" data-open-trend="' + t.id + '">' +
-            '<span>' + meter(s.level) + '</span>' +
+            '<span>' + meterFor(t, s.level) + '</span>' +
             '<span class="row-main"><strong>' + esc(t.name) + '</strong><span class="muted">' + esc(t.summary) + '</span></span>' +
-            '<span class="c-level level">' + (s.level ? LEVEL_LABEL[s.level] : 'Sin clasificar') + '</span>' +
+            '<span class="c-level level">' + levelText(t, s.level) + '</span>' +
             '<span class="c-conf"><span class="pill ' + confLabel(s.confidence) + '">' + confLabel(s.confidence).replace(/^./, c => c.toUpperCase()) + '</span></span></button>').join('');
       });
     }
@@ -422,7 +428,7 @@
       const hoy = bestStatus(id, c, 'hoy');
       const fut = HORIZONS.map(h => ({ h, s: bestStatus(id, c, h.key) })).filter(x => x.s);
       html += '<div class="cty"><div class="cty-head"><button type="button" class="linklike" data-open-country="' + c + '">' + esc(countryName(c)) + '</button>' +
-        (hoy ? meter(hoy.level) + '<span class="level">' + (hoy.level ? LEVEL_LABEL[hoy.level] : 'Sin clasificar') + '</span>' +
+        (hoy ? meterFor(t, hoy.level) + '<span class="level">' + levelText(t, hoy.level) + '</span>' +
           '<span class="conf">Confianza ' + confLabel(hoy.confidence) + '</span>' : '') + '</div>' +
         (hoy ? '<p class="small muted">' + esc(hoy.rationale) + (hoy.pct != null ? ' (' + hoy.pct + '%' + (hoy.note ? ' ' + esc(hoy.note) : '') + ')' : '') + '</p>' : '') +
         fut.map(x => '<p class="fut"><b>' + x.h.title + ' (' + x.h.range + '):</b> ' + esc(x.s.rationale) + '</p>').join('') + '</div>';
@@ -445,11 +451,11 @@
       const fut = HORIZONS.map(h => ({ h, s: bestStatus(t.id, code, h.key) })).filter(x => x.s);
       const cmp = code !== HOME && hoy && hoy.level && ar && ar.level
         ? '<span class="small muted">Argentina: ' + LEVEL_LABEL[ar.level].toLowerCase() + '</span>' : '';
-      return '<button type="button" class="row" data-open-trend="' + t.id + '"><span>' + meter(hoy && hoy.level) + '</span>' +
+      return '<button type="button" class="row" data-open-trend="' + t.id + '"><span>' + meterFor(t, hoy && hoy.level) + '</span>' +
         '<span class="row-main"><strong>' + esc(t.name) + '</strong>' +
         (hoy ? '<span class="muted small">' + esc(hoy.rationale) + '</span>' : '') +
         fut.map(x => '<span class="fut"><b>' + x.h.title + ':</b> ' + esc(x.s.rationale) + '</span>').join('') + '</span>' +
-        '<span class="row-side"><span class="level">' + (hoy && hoy.level ? LEVEL_LABEL[hoy.level] : (hoy ? 'Sin clasificar' : 'Sin dato de hoy')) + '</span>' + cmp + '</span></button>';
+        '<span class="row-side"><span class="level">' + (hoy ? levelText(t, hoy.level) : 'Sin dato de hoy') + '</span>' + cmp + '</span></button>';
     }).join('') + '</div>';
     return html;
   }
