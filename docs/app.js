@@ -84,9 +84,16 @@
 
     if (!latest.length) return { meta: { updatedAt: null, docs }, trends, statuses: [], gaps: [], evidence: [] };
 
-    const runId = latest[0].run_id;
-    const stRows = await (await sbFetch('trend_status?run_id=eq.' + runId +
-      '&select=id,trend_id,country_code,horizon,adoption_level,adoption_pct,adoption_note,confidence,rationale,created_at&limit=2000')).json();
+    // Lo más reciente por (tendencia, país, horizonte), sin importar de qué corrida venga
+    const stAll = await (await sbFetch('trend_status?select=id,trend_id,country_code,horizon,adoption_level,adoption_pct,adoption_note,confidence,rationale,created_at' +
+      '&order=created_at.desc&limit=5000')).json();
+    const stSeen = new Set();
+    const stRows = stAll.filter(s => {
+      const k = s.trend_id + '|' + s.country_code + '|' + s.horizon;
+      if (stSeen.has(k)) return false;
+      stSeen.add(k);
+      return true;
+    });
     const statuses = stRows.map(s => ({
       id: s.id, trendId: s.trend_id, country: s.country_code, horizon: s.horizon, level: s.adoption_level,
       pct: s.adoption_pct, note: s.adoption_note, confidence: Number(s.confidence), rationale: s.rationale,
@@ -94,11 +101,18 @@
     const since = new Date(Math.min.apply(null, stRows.map(s => new Date(s.created_at).getTime())) - 60000).toISOString();
 
     const [gapRows, evRows] = await Promise.all([
-      sbFetch('gaps?run_id=eq.' + runId + '&select=id,trend_id,current_level,reference_level,gap_levels,current_pct,reference_pct,reference_country,confidence,rationale&limit=1000').then(r => r.json()),
+      sbFetch('gaps?select=id,trend_id,segment_id,current_level,reference_level,gap_levels,current_pct,reference_pct,reference_country,confidence,rationale,created_at&order=created_at.desc&limit=2000').then(r => r.json()),
       sbFetch('evidence?select=trend_id,trend_status_id,gap_id,quote,supports,documents(url,title,published_at,fetched_at,sources(name))' +
         '&created_at=gte.' + encodeURIComponent(since) + '&order=created_at.desc&limit=3000').then(r => r.json()),
     ]);
-    const gaps = gapRows.map(g => ({
+    const gapSeen = new Set();
+    const gapLatest = gapRows.filter(g => {
+      const k = g.trend_id + '|' + g.segment_id + '|' + g.reference_country;
+      if (gapSeen.has(k)) return false;
+      gapSeen.add(k);
+      return true;
+    });
+    const gaps = gapLatest.map(g => ({
       id: g.id, trendId: g.trend_id, currentLevel: g.current_level, referenceLevel: g.reference_level, gapLevels: g.gap_levels,
       refCountry: g.reference_country, currentPct: g.current_pct, refPct: g.reference_pct, confidence: Number(g.confidence), rationale: g.rationale,
     }));
