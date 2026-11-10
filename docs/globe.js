@@ -24,7 +24,10 @@
       this.selected = null;
       this.arc = null;
       this.hover = null;
-      this.auto = !reduceMotion;
+      this.auto = !reduceMotion;      // el giro automático nunca se apaga: solo se pausa mientras se interactúa
+      this.holdUntil = 0;             // no girar hasta este instante (ms, reloj de performance.now)
+      this.spin = 0;                  // 0..1: velocidad actual del giro (arranca y frena suave)
+      this.dragging = false;
       this.visible = true;
       this.anim = null;
       this.dirty = true;
@@ -71,7 +74,8 @@
     },
 
     // ---------- movimiento
-    stopAuto() { this.auto = false; },
+    // Pausa el giro un rato (3 s por defecto) y después vuelve a girar solo.
+    stopAuto(ms) { this.holdUntil = performance.now() + (ms || 3000); this.requestDraw(); },
     focus(target, k, ms) {
       let ll = null;
       if (Array.isArray(target)) ll = target;
@@ -113,9 +117,16 @@
           this.rot = [a.from[0] + a.dl * e, a.from[1] + (a.to1 - a.from[1]) * e];
           this.k = a.k0 + (a.k1 - a.k0) * e;
           this.dirty = true;
-          if (p >= 1) this.anim = null; else again = true;
+          if (p >= 1) { this.anim = null; this.holdUntil = Math.max(this.holdUntil, now + 3000); } else again = true;
         }
-        if (this.auto && this.visible && !document.hidden) { this.rot[0] += 0.1; this.dirty = true; again = true; }
+        if (this.auto && this.visible && !document.hidden) {
+          // gira solo si nadie lo está moviendo, no hay animación y pasó la pausa; arranca y frena suave
+          const idle = !this.anim && !this.dragging && !this.hover && now >= this.holdUntil;
+          this.spin += ((idle ? 1 : 0) - this.spin) * 0.06;
+          if (!idle && this.spin < 0.002) this.spin = 0;
+          if (this.spin > 0) { this.rot[0] += 0.1 * this.spin; this.dirty = true; }
+          again = true;
+        }
         if (this.dirty) { this.dirty = false; this._draw(); }
         if (again) requestAnimationFrame(step); else this.looping = false;
       };
@@ -197,9 +208,10 @@
       const c = this.canvas;
       let drag = null;
       const sens = () => 0.32 / this.k;
+      const release = () => { this.dragging = false; this.holdUntil = performance.now() + 2500; };
       c.addEventListener('pointerdown', e => {
         drag = { x: e.clientX, y: e.clientY, rot: this.rot.slice(), moved: false };
-        this.anim = null; this.stopAuto();
+        this.anim = null; this.dragging = true; this.holdUntil = Infinity;
         try { c.setPointerCapture(e.pointerId); } catch (err) { /* sin captura */ }
       });
       c.addEventListener('pointermove', e => {
@@ -216,6 +228,7 @@
         const code = this.hit(x, y);
         if (code !== this.hover) {
           this.hover = code;
+          if (!code) this.holdUntil = Math.max(this.holdUntil, performance.now() + 1500);
           c.classList.toggle('over', !!code);
           this.requestDraw();
         }
@@ -224,7 +237,7 @@
       const end = e => {
         if (!drag) return;
         const wasClick = !drag.moved;
-        drag = null; c.classList.remove('grabbing');
+        drag = null; c.classList.remove('grabbing'); release();
         if (wasClick) {
           const [x, y] = this._xy(e);
           const code = this.hit(x, y);
@@ -232,9 +245,9 @@
         }
       };
       c.addEventListener('pointerup', end);
-      c.addEventListener('pointercancel', () => { drag = null; c.classList.remove('grabbing'); });
+      c.addEventListener('pointercancel', () => { drag = null; c.classList.remove('grabbing'); release(); });
       c.addEventListener('pointerleave', () => {
-        if (this.hover) { this.hover = null; c.classList.remove('over'); this.requestDraw(); if (this.opts.onHover) this.opts.onHover(null); }
+        if (this.hover) { this.hover = null; this.holdUntil = Math.max(this.holdUntil, performance.now() + 1500); c.classList.remove('over'); this.requestDraw(); if (this.opts.onHover) this.opts.onHover(null); }
       });
       // teclado: flechas giran, + y - acercan
       c.addEventListener('keydown', e => {
@@ -251,6 +264,8 @@
     _observe() {
       if ('ResizeObserver' in window) new ResizeObserver(() => this.resize()).observe(this.canvas);
       else window.addEventListener('resize', () => this.resize());
+      // al volver a la pestaña, retomar el giro (el loop se corta cuando la pestaña está oculta)
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) this.requestDraw(); });
       if ('IntersectionObserver' in window) {
         new IntersectionObserver(es => { this.visible = es[0].isIntersecting; if (this.visible) this.requestDraw(); }).observe(this.canvas);
       }
